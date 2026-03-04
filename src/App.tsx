@@ -195,7 +195,7 @@ function ChatbotInstance({ id, name }: { id: number, name: string }) {
             <div key={msg.id} className="flex flex-col gap-2">
               {/* Prompt Panel */}
               {msg.role === 'user' && (
-                <div className="bg-zinc-100 border border-zinc-200 rounded-lg p-3 text-xs text-zinc-700 font-medium">
+                <div className="sticky top-0 z-10 bg-zinc-100 border border-zinc-200 rounded-lg p-3 text-xs text-zinc-700 font-medium">
                   {msg.content}
                 </div>
               )}
