@@ -44,34 +44,27 @@ interface Message {
   };
 }
 
-function ChatbotInstance({ id, name, isAutoRunning, toggleAutoRun }: { id: number, name: string, isAutoRunning: boolean, toggleAutoRun: () => void }) {
-  const [messages, setMessages] = useState<Message[]>([]);
+function ChatbotInstance({ id, name }: { id: number, name: string }) {
+  const [isAutoRunning, setIsAutoRunning] = useState(false);
   const [status, setStatus] = useState<'online' | 'offline' | 'checking'>('checking');
-  const [currentPromptIndex, setCurrentPromptIndex] = useState(0);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [metrics, setMetrics] = useState({
-    totalTokens: 0,
-    avgTokensPerSecond: 0,
-    requestsCompleted: 0
-  });
+  
+  // 4 chatbots per instance
+  const [chatbots, setChatbots] = useState(Array.from({ length: 4 }, (_, i) => ({
+    id: i,
+    messages: [] as Message[],
+    currentPromptIndex: 0,
+    isGenerating: false,
+    metrics: { totalTokens: 0, avgTokensPerSecond: 0, requestsCompleted: 0 }
+  })));
 
-  const prompts = PROMPTS_PER_INSTANCE[id] || [];
-  const messagesEndRef = useRef<HTMLDivElement>(null);
   const autoRunRef = useRef(isAutoRunning);
-
-  useEffect(() => {
-    autoRunRef.current = isAutoRunning;
-  }, [isAutoRunning]);
+  useEffect(() => { autoRunRef.current = isAutoRunning; }, [isAutoRunning]);
 
   useEffect(() => {
     checkStatus();
     const interval = setInterval(checkStatus, 10000);
     return () => clearInterval(interval);
   }, [id]);
-
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
 
   const checkStatus = async () => {
     try {
@@ -83,10 +76,10 @@ function ChatbotInstance({ id, name, isAutoRunning, toggleAutoRun }: { id: numbe
     }
   };
 
-  const generateResponse = async (prompt: string) => {
-    setIsGenerating(true);
-    const userMsgId = Date.now().toString();
-    setMessages(prev => [...prev, { id: userMsgId, role: 'user', content: prompt }]);
+  const generateResponse = async (chatbotIndex: number, prompt: string) => {
+    setChatbots(prev => prev.map((cb, i) => i === chatbotIndex ? { ...cb, isGenerating: true } : cb));
+    const userMsgId = Date.now().toString() + chatbotIndex;
+    setChatbots(prev => prev.map((cb, i) => i === chatbotIndex ? { ...cb, messages: [...cb.messages, { id: userMsgId, role: 'user', content: prompt }] } : cb));
 
     try {
       const res = await fetch(`/api/chat/${id}`, {
@@ -100,48 +93,43 @@ function ChatbotInstance({ id, name, isAutoRunning, toggleAutoRun }: { id: numbe
       const data = await res.json();
       
       const evalCount = data.tokens_predicted || 0;
-      const evalDuration = (data.timings?.predicted_ms || 0) * 1e6; // convert ms to ns
-      const totalDuration = ((data.timings?.predicted_ms || 0) + (data.timings?.prompt_ms || 0)) * 1e6;
       const tokensPerSecond = data.timings?.predicted_per_second || 0;
 
-      const assistantMsgId = (Date.now() + 1).toString();
-      setMessages(prev => [...prev, {
-        id: assistantMsgId,
-        role: 'assistant',
-        content: data.content,
+      const assistantMsgId = (Date.now() + 1).toString() + chatbotIndex;
+      setChatbots(prev => prev.map((cb, i) => i === chatbotIndex ? { 
+        ...cb, 
+        messages: [...cb.messages, {
+          id: assistantMsgId,
+          role: 'assistant',
+          content: data.content,
+          metrics: {
+            evalCount,
+            evalDuration: (data.timings?.predicted_ms || 0) * 1e6,
+            tokensPerSecond,
+            totalDuration: ((data.timings?.predicted_ms || 0) + (data.timings?.prompt_ms || 0)) * 1e6
+          }
+        }],
         metrics: {
-          evalCount,
-          evalDuration,
-          tokensPerSecond,
-          totalDuration
+          totalTokens: cb.metrics.totalTokens + evalCount,
+          requestsCompleted: cb.metrics.requestsCompleted + 1,
+          avgTokensPerSecond: cb.metrics.avgTokensPerSecond === 0 
+            ? tokensPerSecond 
+            : ((cb.metrics.avgTokensPerSecond * cb.metrics.requestsCompleted) + tokensPerSecond) / (cb.metrics.requestsCompleted + 1)
         }
-      }]);
-
-      setMetrics(prev => {
-        const newTotalTokens = prev.totalTokens + evalCount;
-        const newRequests = prev.requestsCompleted + 1;
-        const newAvg = prev.avgTokensPerSecond === 0 
-          ? tokensPerSecond 
-          : ((prev.avgTokensPerSecond * prev.requestsCompleted) + tokensPerSecond) / newRequests;
-        
-        return {
-          totalTokens: newTotalTokens,
-          avgTokensPerSecond: newAvg,
-          requestsCompleted: newRequests
-        };
-      });
+      } : cb));
 
     } catch (error) {
       console.error(error);
-      setMessages(prev => [...prev, { 
-        id: Date.now().toString(), 
-        role: 'assistant', 
-        content: `Error connecting to llama.cpp instance ${id}. Make sure it is running.` 
-      }]);
-      // Stop auto-run on error
-      toggleAutoRun();
+      setChatbots(prev => prev.map((cb, i) => i === chatbotIndex ? { 
+        ...cb, 
+        messages: [...cb.messages, { 
+          id: Date.now().toString(), 
+          role: 'assistant', 
+          content: `Error connecting to llama.cpp instance ${id}.` 
+        }]
+      } : cb));
     } finally {
-      setIsGenerating(false);
+      setChatbots(prev => prev.map((cb, i) => i === chatbotIndex ? { ...cb, isGenerating: false } : cb));
     }
   };
 
@@ -149,189 +137,95 @@ function ChatbotInstance({ id, name, isAutoRunning, toggleAutoRun }: { id: numbe
     let timeoutId: NodeJS.Timeout;
 
     const runCycle = async () => {
-      if (!autoRunRef.current || isGenerating) return;
+      if (!autoRunRef.current) return;
 
-      if (currentPromptIndex >= prompts.length) {
-        // Stop auto-run when finished
-        if (autoRunRef.current) toggleAutoRun();
-        return;
-      }
+      const promises = chatbots.map(async (cb, index) => {
+        if (cb.isGenerating || cb.currentPromptIndex >= PROMPTS_PER_INSTANCE[id].length) return;
+        
+        const prompt = PROMPTS_PER_INSTANCE[id][cb.currentPromptIndex];
+        await generateResponse(index, prompt);
+        
+        setChatbots(prev => prev.map((c, i) => i === index ? { ...c, currentPromptIndex: c.currentPromptIndex + 1 } : c));
+      });
 
-      const prompt = prompts[currentPromptIndex];
-      await generateResponse(prompt);
-      
-      const nextIndex = currentPromptIndex + 1;
-      setCurrentPromptIndex(nextIndex);
+      await Promise.all(promises);
 
-      if (autoRunRef.current && nextIndex < prompts.length) {
-        timeoutId = setTimeout(runCycle, 15000); // Wait 15s before next prompt
+      if (autoRunRef.current && chatbots.some(cb => cb.currentPromptIndex < PROMPTS_PER_INSTANCE[id].length)) {
+        timeoutId = setTimeout(runCycle, 15000);
       } else {
-        // Stop auto-run when finished
-        if (autoRunRef.current) toggleAutoRun();
+        setIsAutoRunning(false);
       }
     };
 
-    if (isAutoRunning && !isGenerating) {
+    if (isAutoRunning) {
       runCycle();
     }
 
     return () => clearTimeout(timeoutId);
-  }, [isAutoRunning, isGenerating, currentPromptIndex, prompts, toggleAutoRun]);
+  }, [isAutoRunning, chatbots, id]);
+
+  const toggleAutoRun = () => {
+    setIsAutoRunning(!isAutoRunning);
+  };
 
   return (
-    <div className="bg-white border border-zinc-200 rounded-xl shadow-sm flex flex-col h-[600px] overflow-hidden">
-      {/* Header */}
+    <div className="bg-white border border-zinc-200 rounded-xl shadow-sm flex flex-col h-[800px] overflow-hidden">
       <div className="p-4 border-b border-zinc-100 bg-zinc-50 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Server className="w-5 h-5 text-zinc-500" />
-          <div>
-            <h2 className="font-semibold text-sm text-zinc-900">{name}</h2>
-            <div className="flex items-center gap-2 mt-1">
-              <div className={`w-2 h-2 rounded-full ${status === 'online' ? 'bg-emerald-500' : status === 'checking' ? 'bg-yellow-500' : 'bg-red-500'}`}></div>
-              <span className="text-[10px] uppercase tracking-wider font-mono text-zinc-500">{status}</span>
-            </div>
-          </div>
+          <h2 className="font-semibold text-sm text-zinc-900">{name}</h2>
+          <div className={`w-2 h-2 rounded-full ${status === 'online' ? 'bg-emerald-500' : 'bg-red-500'}`}></div>
         </div>
-        
-        <div className="flex items-center gap-3">
-          <div className="text-right hidden sm:block">
-            <div className="text-[10px] text-zinc-400 uppercase tracking-wider">Avg Speed</div>
-            <div className="text-xs font-mono font-medium text-zinc-900">{metrics.avgTokensPerSecond.toFixed(1)} t/s</div>
-          </div>
-          <button
-            onClick={toggleAutoRun}
-            disabled={status !== 'online'}
-            className={`p-2 rounded-lg transition-all ${
-              isAutoRunning 
-                ? 'bg-red-50 text-red-600 hover:bg-red-100' 
-                : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
-            } disabled:opacity-50 disabled:cursor-not-allowed`}
-            title={isAutoRunning ? "Stop Auto-Prompt" : "Start Auto-Prompt"}
-          >
-            {isAutoRunning ? <Square className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current" />}
-          </button>
-        </div>
+        <button
+          onClick={toggleAutoRun}
+          disabled={status !== 'online'}
+          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+            isAutoRunning ? 'bg-red-50 text-red-600' : 'bg-zinc-900 text-white'
+          }`}
+        >
+          {isAutoRunning ? 'Stop' : 'Run'}
+        </button>
       </div>
       
-      {/* Chat Area - Split Panels */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-6">
-        {messages.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center text-zinc-400 space-y-3">
-            <Bot className="w-8 h-8 opacity-20" />
-            <p className="text-sm text-center">Click play to start inference.</p>
-          </div>
-        ) : (
-          messages.map((msg) => (
-            <React.Fragment key={msg.id}>
-              {/* Prompt Panel */}
-              {msg.role === 'user' && (
-                <div className="sticky top-0 z-20 bg-zinc-100 border border-zinc-200 rounded-lg p-3 text-xs text-zinc-700 font-medium shadow-sm">
-                  {msg.content}
-                </div>
-              )}
-              
-              {/* Output Panel */}
-              {msg.role === 'assistant' && (
-                <div className="bg-white border border-zinc-200 rounded-lg p-3 shadow-sm">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Bot className="w-4 h-4 text-zinc-400" />
-                    <span className="text-[10px] font-semibold text-zinc-500 uppercase">Response</span>
-                  </div>
-                  <p className="text-xs text-zinc-800 leading-relaxed whitespace-pre-wrap">{msg.content}</p>
-                  
-                  {msg.metrics && (
-                    <div className="flex flex-wrap gap-3 mt-3 pt-3 border-t border-zinc-100 text-[10px] font-mono text-zinc-500">
-                      <span className="flex items-center gap-1">
-                        <Zap className="w-3 h-3 text-emerald-500" />
-                        {msg.metrics.tokensPerSecond.toFixed(1)} t/s
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Activity className="w-3 h-3 text-zinc-400" />
-                        {msg.metrics.evalCount} tokens
-                      </span>
-                    </div>
+      <div className="flex-1 grid grid-cols-2 gap-2 p-2 overflow-y-auto">
+        {chatbots.map((cb, index) => (
+          <div key={index} className="border border-zinc-100 rounded-lg flex flex-col overflow-hidden bg-zinc-50">
+            <div className="p-2 border-b border-zinc-100 text-[10px] font-semibold text-zinc-500 uppercase">Chatbot {index + 1}</div>
+            <div className="flex-1 overflow-y-auto p-2 space-y-2">
+              {cb.messages.map(msg => (
+                <div key={msg.id} className="text-xs">
+                  {msg.role === 'user' ? (
+                    <div className="bg-zinc-200 p-2 rounded">{msg.content}</div>
+                  ) : (
+                    <div className="bg-white p-2 rounded border border-zinc-100">{msg.content}</div>
                   )}
                 </div>
-              )}
-            </React.Fragment>
-          ))
-        )}
-        {isGenerating && (
-          <div className="flex items-center gap-2 text-[10px] font-mono text-zinc-500 p-2">
-            <span className="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-pulse"></span>
-            GENERATING...
+              ))}
+            </div>
           </div>
-        )}
-        <div ref={messagesEndRef} />
+        ))}
       </div>
     </div>
   );
 }
 
 export default function App() {
-  const [autoRunStates, setAutoRunStates] = useState<Record<number, boolean>>({
-    1: false,
-    2: false,
-    3: false,
-    4: false
-  });
-
-  const toggleAutoRun = (id: number) => {
-    setAutoRunStates(prev => ({ ...prev, [id]: !prev[id] }));
-  };
-
-  const runAll = () => {
-    setAutoRunStates({
-      1: true,
-      2: true,
-      3: true,
-      4: true
-    });
-  };
-
-  const stopAll = () => {
-    setAutoRunStates({
-      1: false,
-      2: false,
-      3: false,
-      4: false
-    });
-  };
-
-  const isAnyRunning = Object.values(autoRunStates).some(state => state);
-
   return (
     <div className="min-h-screen bg-zinc-50 text-zinc-900 font-sans p-4 md:p-6">
       <div className="max-w-[1600px] mx-auto">
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-3">
-            <Cpu className="w-8 h-8 text-zinc-900" />
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight text-zinc-900">Ampere Density Cluster</h1>
-              <p className="text-zinc-500 text-sm">4x Independent Qwen3-8B-GGUF Instances</p>
-            </div>
-          </div>
-          <div className="flex gap-3">
-            <button
-              onClick={runAll}
-              className="px-4 py-2 bg-zinc-900 text-white rounded-lg text-sm font-medium hover:bg-zinc-800 transition-colors"
-            >
-              Run All
-            </button>
-            <button
-              onClick={stopAll}
-              className="px-4 py-2 bg-zinc-200 text-zinc-900 rounded-lg text-sm font-medium hover:bg-zinc-300 transition-colors"
-            >
-              Stop All
-            </button>
+        <div className="flex items-center gap-3 mb-8">
+          <Cpu className="w-8 h-8 text-zinc-900" />
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-zinc-900">Ampere Density Cluster</h1>
+            <p className="text-zinc-500 text-sm">4x Independent Qwen3-8B-GGUF Instances (4 Chatbots per Instance)</p>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 md:gap-6">
-          <ChatbotInstance id={1} name="Instance 1 (Port 8080)" isAutoRunning={autoRunStates[1]} toggleAutoRun={() => toggleAutoRun(1)} />
-          <ChatbotInstance id={2} name="Instance 2 (Port 8081)" isAutoRunning={autoRunStates[2]} toggleAutoRun={() => toggleAutoRun(2)} />
-          <ChatbotInstance id={3} name="Instance 3 (Port 8082)" isAutoRunning={autoRunStates[3]} toggleAutoRun={() => toggleAutoRun(3)} />
-          <ChatbotInstance id={4} name="Instance 4 (Port 8083)" isAutoRunning={autoRunStates[4]} toggleAutoRun={() => toggleAutoRun(4)} />
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 md:gap-6">
+          <ChatbotInstance id={1} name="Instance 1 (Port 8080)" />
+          <ChatbotInstance id={2} name="Instance 2 (Port 8081)" />
+          <ChatbotInstance id={3} name="Instance 3 (Port 8082)" />
+          <ChatbotInstance id={4} name="Instance 4 (Port 8083)" />
         </div>
       </div>
     </div>
