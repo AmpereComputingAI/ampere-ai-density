@@ -189,12 +189,16 @@ function ChatbotInstance({ id, name }: { id: number, name: string }) {
         <button
           onClick={toggleAutoRun}
           disabled={status !== 'online'}
-          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
             isAutoRunning ? 'bg-red-50 text-red-600' : 'bg-zinc-900 text-white'
           }`}
         >
           {isAutoRunning ? 'Stop' : 'Run'}
         </button>
+      </div>
+      
+      <div className="px-4 py-2 bg-zinc-100 text-[10px] font-mono text-zinc-600 border-b border-zinc-200">
+        Aggregate Performance: {chatbots.reduce((acc, cb) => acc + cb.metrics.avgTokensPerSecond, 0).toFixed(2)} TPS
       </div>
       
       <div className="flex-1 grid grid-cols-2 gap-2 p-2 overflow-y-auto">
@@ -207,7 +211,14 @@ function ChatbotInstance({ id, name }: { id: number, name: string }) {
                   {msg.role === 'user' ? (
                     <div className="bg-zinc-200 p-2 rounded">{msg.content}</div>
                   ) : (
-                    <div className="bg-white p-2 rounded border border-zinc-100">{msg.content}</div>
+                    <div className="bg-white p-2 rounded border border-zinc-100 flex flex-col gap-1">
+                      <div>{msg.content}</div>
+                      {msg.metrics && (
+                        <div className="text-[9px] font-mono text-zinc-400 mt-1">
+                          {msg.metrics.tokensPerSecond.toFixed(2)} TPS
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
               ))}
