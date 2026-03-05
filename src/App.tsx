@@ -258,10 +258,10 @@ export default function App() {
         </div>
 
         <div className="grid grid-cols-4 gap-4">
-          <ChatbotInstance id={1} name="Instance 1 (Port 8080)" />
-          <ChatbotInstance id={2} name="Instance 2 (Port 8081)" />
-          <ChatbotInstance id={3} name="Instance 3 (Port 8082)" />
-          <ChatbotInstance id={4} name="Instance 4 (Port 8083)" />
+          <ChatbotInstance id={1} name="llama.cpp Engine 1 (Port 8080)" />
+          <ChatbotInstance id={2} name="llama.cpp Engine 2 (Port 8081)" />
+          <ChatbotInstance id={3} name="llama.cpp Engine 3 (Port 8082)" />
+          <ChatbotInstance id={4} name="llama.cpp Engine 4 (Port 8083)" />
         </div>
       </div>
     </div>
