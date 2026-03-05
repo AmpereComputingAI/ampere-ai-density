@@ -180,6 +180,10 @@ function ChatbotInstance({ id, name }: { id: number, name: string }) {
   }, [isAutoRunning, chatbots, id]);
 
   const toggleAutoRun = () => {
+    if (!isAutoRunning) {
+      // Starting a new run, reset indices and messages
+      setChatbots(prev => prev.map(cb => ({ ...cb, currentPromptIndex: 0, messages: [] })));
+    }
     setIsAutoRunning(!isAutoRunning);
   };
 
