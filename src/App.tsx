@@ -203,25 +203,28 @@ function ChatbotInstance({ id, name }: { id: number, name: string }) {
       
       <div className="flex-1 grid grid-cols-2 gap-2 p-2 overflow-y-auto">
         {chatbots.map((cb, index) => (
-          <div key={index} className="border border-zinc-100 rounded-lg flex flex-col overflow-hidden bg-zinc-50">
-            <div className="p-2 border-b border-zinc-100 text-[10px] font-semibold text-zinc-500 uppercase">Chatbot {index + 1}</div>
-            <div ref={el => messageRefs.current[index] = el} className="flex-1 overflow-y-auto p-2 space-y-2">
-              {cb.messages.map(msg => (
-                <div key={msg.id} className="text-xs">
-                  {msg.role === 'user' ? (
-                    <div className="bg-zinc-200 p-2 rounded">{msg.content}</div>
-                  ) : (
-                    <div className="bg-white p-2 rounded border border-zinc-100 flex flex-col gap-1">
-                      <div>{msg.content}</div>
-                      {msg.metrics && (
-                        <div className="text-[9px] font-mono text-zinc-400 mt-1">
-                          {msg.metrics.tokensPerSecond.toFixed(2)} TPS
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              ))}
+          <div key={index} className="border border-zinc-100 rounded-lg flex flex-col overflow-hidden bg-zinc-50 h-[380px]">
+            <div className="p-2 border-b border-zinc-100 text-[10px] font-semibold text-zinc-500 uppercase bg-zinc-100">Chatbot {index + 1}</div>
+            <div className="flex flex-col flex-1 overflow-hidden">
+              <div className="flex-1 border-b border-zinc-100 overflow-y-auto p-2">
+                <div className="text-[9px] font-bold text-zinc-400 uppercase mb-1">Prompts</div>
+                {cb.messages.filter(m => m.role === 'user').map(msg => (
+                  <div key={msg.id} className="text-xs bg-zinc-200 p-1.5 rounded mb-1">{msg.content}</div>
+                ))}
+              </div>
+              <div ref={el => messageRefs.current[index] = el} className="flex-1 overflow-y-auto p-2">
+                <div className="text-[9px] font-bold text-zinc-400 uppercase mb-1">Output</div>
+                {cb.messages.filter(m => m.role === 'assistant').map(msg => (
+                  <div key={msg.id} className="text-xs bg-white p-1.5 rounded border border-zinc-100 mb-1 flex flex-col gap-0.5">
+                    <div>{msg.content}</div>
+                    {msg.metrics && (
+                      <div className="text-[8px] font-mono text-zinc-400">
+                        {msg.metrics.tokensPerSecond.toFixed(2)} TPS
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         ))}
