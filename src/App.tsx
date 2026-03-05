@@ -221,8 +221,8 @@ export default function App() {
   return (
     <div className="min-h-screen bg-zinc-50 text-zinc-900 font-sans p-4 md:p-6">
       <div className="max-w-[1600px] mx-auto">
-        <div className="flex items-center gap-3 mb-8">
-          <Cpu className="w-8 h-8 text-zinc-900" />
+        <div className="flex items-center gap-4 mb-8">
+          <img src="https://uawartifacts.blob.core.windows.net/upload-files/AmpereSoftbank_e2225bdd2b.svg" alt="Ampere Softbank" className="w-48 h-48 object-contain" referrerPolicy="no-referrer" />
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-zinc-900">High-Density LLM Orchestration on Ampere CPUs</h1>
             <p className="text-zinc-500 text-sm">High-throughput inference across multi-instance compute clusters.</p>
