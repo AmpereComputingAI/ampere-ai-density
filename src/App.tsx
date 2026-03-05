@@ -148,7 +148,7 @@ function ChatbotInstance({ id, name }: { id: number, name: string }) {
       await Promise.all(promises);
 
       if (autoRunRef.current && chatbots.some(cb => cb.currentPromptIndex < PROMPTS_PER_INSTANCE[id][cb.id].length)) {
-        timeoutId = setTimeout(runCycle, 15000);
+        timeoutId = setTimeout(runCycle, 300000);
       } else {
         setIsAutoRunning(false);
       }
