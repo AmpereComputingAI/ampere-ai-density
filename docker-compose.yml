@@ -33,7 +33,8 @@ services:
       --hf-file ${HF_FILE}
       --port 8080
       --host 0.0.0.0
-      -c ${CONTEXT_SIZE}
+      -c ${LLAMA_ARG_CTX_SIZE}
+      -np ${LLAMA_ARG_N_PARALLEL}
       -t 16
     cpuset: "0-31"
 
@@ -51,7 +52,8 @@ services:
       --hf-file ${HF_FILE}
       --port 8080
       --host 0.0.0.0
-      -c ${CONTEXT_SIZE}
+      -c ${LLAMA_ARG_CTX_SIZE}
+      -np ${LLAMA_ARG_N_PARALLEL}
       -t 16
     cpuset: "32-63"
 
@@ -69,7 +71,8 @@ services:
       --hf-file ${HF_FILE}
       --port 8080
       --host 0.0.0.0
-      -c ${CONTEXT_SIZE}
+      -c ${LLAMA_ARG_CTX_SIZE}
+      -np ${LLAMA_ARG_N_PARALLEL}
       -t 16
     cpuset: "64-95"
 
@@ -87,7 +90,8 @@ services:
       --hf-file ${HF_FILE}
       --port 8080
       --host 0.0.0.0
-      -c ${CONTEXT_SIZE}
+      -c ${LLAMA_ARG_CTX_SIZE}
+      -np ${LLAMA_ARG_N_PARALLEL}
       -t 16
     cpuset: "96-127"
 
