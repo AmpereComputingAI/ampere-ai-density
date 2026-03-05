@@ -252,8 +252,8 @@ export default function App() {
         <div className="flex items-center gap-3 mb-8">
           <Cpu className="w-8 h-8 text-zinc-900" />
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-zinc-900">Ampere Density Cluster</h1>
-            <p className="text-zinc-500 text-sm">4x Independent Qwen3-8B-GGUF Instances (5 Chatbots per Instance)</p>
+            <h1 className="text-2xl font-bold tracking-tight text-zinc-900">High-Density LLM Orchestration on Ampere CPUs</h1>
+            <p className="text-zinc-500 text-sm">High-throughput inference across multi-instance compute clusters.</p>
           </div>
         </div>
 
