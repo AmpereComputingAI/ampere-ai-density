@@ -53,6 +53,16 @@ function ChatbotInstance({ id, name }: { id: number, name: string }) {
     metrics: { totalTokens: 0, avgTokensPerSecond: 0, requestsCompleted: 0 }
   })));
 
+  const messageRefs = useRef<(HTMLDivElement | null)[]>(Array(4).fill(null));
+
+  useEffect(() => {
+    chatbots.forEach((cb, index) => {
+      if (messageRefs.current[index]) {
+        messageRefs.current[index]!.scrollTop = messageRefs.current[index]!.scrollHeight;
+      }
+    });
+  }, [chatbots]);
+
   const autoRunRef = useRef(isAutoRunning);
   useEffect(() => { autoRunRef.current = isAutoRunning; }, [isAutoRunning]);
 
@@ -191,7 +201,7 @@ function ChatbotInstance({ id, name }: { id: number, name: string }) {
         {chatbots.map((cb, index) => (
           <div key={index} className="border border-zinc-100 rounded-lg flex flex-col overflow-hidden bg-zinc-50">
             <div className="p-2 border-b border-zinc-100 text-[10px] font-semibold text-zinc-500 uppercase">Chatbot {index + 1}</div>
-            <div className="flex-1 overflow-y-auto p-2 space-y-2">
+            <div ref={el => messageRefs.current[index] = el} className="flex-1 overflow-y-auto p-2 space-y-2">
               {cb.messages.map(msg => (
                 <div key={msg.id} className="text-xs">
                   {msg.role === 'user' ? (
