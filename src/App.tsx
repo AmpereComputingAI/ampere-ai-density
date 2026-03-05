@@ -206,7 +206,7 @@ function ChatbotInstance({ id, name }: { id: number, name: string }) {
           <div key={index} className="border border-zinc-100 rounded-lg flex flex-col overflow-hidden bg-zinc-50 h-[380px]">
             <div className="p-2 border-b border-zinc-100 text-[10px] font-semibold text-zinc-500 uppercase bg-zinc-100">Chatbot {index + 1}</div>
             <div className="flex flex-col flex-1 overflow-hidden">
-              <div className="flex-1 border-b border-zinc-100 overflow-y-auto p-2">
+              <div className="h-24 border-b border-zinc-100 overflow-y-auto p-2">
                 <div className="text-[9px] font-bold text-zinc-400 uppercase mb-1">Prompts</div>
                 {cb.messages.filter(m => m.role === 'user').map(msg => (
                   <div key={msg.id} className="text-xs bg-zinc-200 p-1.5 rounded mb-1">{msg.content}</div>
