@@ -180,7 +180,7 @@ function ChatbotInstance({ id, name }: { id: number, name: string }) {
   };
 
   return (
-    <div className="bg-white border border-zinc-200 rounded-xl shadow-sm flex flex-col h-[800px] overflow-hidden">
+    <div className="bg-white border border-zinc-200 rounded-xl shadow-sm flex flex-col h-[900px] overflow-hidden">
       <div className="p-4 border-b border-zinc-100 bg-zinc-50 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Server className="w-5 h-5 text-zinc-500" />
@@ -205,9 +205,9 @@ function ChatbotInstance({ id, name }: { id: number, name: string }) {
         Aggregate Performance: {chatbots.reduce((acc, cb) => acc + cb.metrics.avgTokensPerSecond, 0).toFixed(2)} TPS
       </div>
       
-      <div className="flex-1 grid grid-cols-2 gap-2 p-2 overflow-y-auto">
+      <div className="flex-1 flex flex-col gap-2 p-2 overflow-y-auto">
         {chatbots.map((cb, index) => (
-          <div key={index} className="border border-zinc-100 rounded-lg flex flex-col overflow-hidden bg-zinc-50 h-[380px]">
+          <div key={index} className="border border-zinc-100 rounded-lg flex flex-col overflow-hidden bg-zinc-50 h-[200px]">
             <div className="p-2 border-b border-zinc-100 text-[10px] font-semibold text-zinc-500 uppercase bg-zinc-100">Chatbot {index + 1}</div>
             <div className="flex flex-col flex-1 overflow-hidden">
               <div ref={el => promptRefs.current[index] = el} className="h-12 border-b border-zinc-100 overflow-y-auto p-2">
@@ -249,7 +249,7 @@ export default function App() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 md:gap-6">
+        <div className="grid grid-cols-4 gap-4">
           <ChatbotInstance id={1} name="Instance 1 (Port 8080)" />
           <ChatbotInstance id={2} name="Instance 2 (Port 8081)" />
           <ChatbotInstance id={3} name="Instance 3 (Port 8082)" />
