@@ -19,6 +19,7 @@ interface Message {
 function ChatbotInstance({ id, name }: { id: number, name: string }) {
   const [isAutoRunning, setIsAutoRunning] = useState(false);
   const [status, setStatus] = useState<'online' | 'offline' | 'checking'>('checking');
+  const [model, setModel] = useState<string>('Loading...');
   
   // 5 chatbots per instance
   const [chatbots, setChatbots] = useState(Array.from({ length: 5 }, (_, i) => ({
@@ -48,6 +49,7 @@ function ChatbotInstance({ id, name }: { id: number, name: string }) {
 
   useEffect(() => {
     checkStatus();
+    fetchModel();
     const interval = setInterval(checkStatus, 10000);
     return () => clearInterval(interval);
   }, [id]);
@@ -59,6 +61,22 @@ function ChatbotInstance({ id, name }: { id: number, name: string }) {
       setStatus(data.status);
     } catch (e) {
       setStatus('offline');
+    }
+  };
+
+  const fetchModel = async () => {
+    try {
+      const res = await fetch(`/api/models/${id}`);
+      const data = await res.json();
+      // Assuming llama.cpp returns { "models": [ { "id": "..." } ] }
+      // Let's try to get the first model's ID.
+      if (data.models && data.models.length > 0) {
+        setModel(data.models[0].id);
+      } else {
+        setModel('Unknown');
+      }
+    } catch (e) {
+      setModel('Unknown');
     }
   };
 
@@ -164,7 +182,10 @@ function ChatbotInstance({ id, name }: { id: number, name: string }) {
       <div className="p-4 border-b border-zinc-100 bg-zinc-50 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <img src="https://user-images.githubusercontent.com/1991296/230134379-7181e485-c521-4d23-a0d6-f7b3b61ba524.png" alt="llama.cpp" className="w-20 h-20 object-contain" referrerPolicy="no-referrer" />
-          <h2 className="font-semibold text-sm text-zinc-900 truncate">{name}</h2>
+          <div className="flex flex-col">
+            <h2 className="font-semibold text-sm text-zinc-900 truncate">{name}</h2>
+            <span className="text-[10px] text-zinc-500 font-mono">{model}</span>
+          </div>
           <div className="flex items-center gap-1.5 ml-auto">
             <div className={`w-2 h-2 rounded-full ${status === 'online' ? 'bg-emerald-500' : status === 'checking' ? 'bg-yellow-500' : 'bg-red-500'}`}></div>
             <span className="text-[10px] font-semibold text-zinc-500 uppercase">{status}</span>

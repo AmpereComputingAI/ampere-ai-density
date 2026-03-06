@@ -20,6 +20,24 @@ async function startServer() {
     return process.env[envVar] || `http://localhost:808${parseInt(id) - 1}`;
   };
 
+  app.get("/api/models/:id", async (req, res) => {
+    console.log(`Fetching models for instance ${req.params.id}`);
+    try {
+      const url = getLlamaUrl(req.params.id);
+      const response = await fetch(`${url}/models`);
+      if (!response.ok) {
+        throw new Error(`llama.cpp API error: ${response.statusText}`);
+      }
+      const data = await response.json();
+      // Assuming llama.cpp returns { "models": [ { "id": "..." } ] } or similar.
+      // I'll return the whole data for now, and let the frontend decide.
+      res.json(data);
+    } catch (error: any) {
+      console.log(`Failed to fetch models for ${req.params.id}: ${error.message}`);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.get("/api/status/:id", async (req, res) => {
     console.log(`Status check for instance ${req.params.id}`);
     try {
