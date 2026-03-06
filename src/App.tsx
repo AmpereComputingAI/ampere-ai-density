@@ -19,6 +19,7 @@ interface Message {
 function ChatbotInstance({ id, name }: { id: number, name: string }) {
   const [isAutoRunning, setIsAutoRunning] = useState(false);
   const [status, setStatus] = useState<'online' | 'offline' | 'checking'>('checking');
+  const [cpuUsage, setCpuUsage] = useState<number>(0);
   
   // 5 chatbots per instance
   const [chatbots, setChatbots] = useState(Array.from({ length: 5 }, (_, i) => ({
@@ -59,8 +60,10 @@ function ChatbotInstance({ id, name }: { id: number, name: string }) {
       const res = await fetch(`/api/status/${id}`);
       const data = await res.json();
       setStatus(data.status);
+      setCpuUsage(data.cpuUsage || 0);
     } catch (e) {
       setStatus('offline');
+      setCpuUsage(0);
     }
   };
 
@@ -162,6 +165,7 @@ function ChatbotInstance({ id, name }: { id: number, name: string }) {
           <div className="flex items-center gap-1.5 ml-auto">
             <div className={`w-2 h-2 rounded-full ${status === 'online' ? 'bg-emerald-500' : status === 'checking' ? 'bg-yellow-500' : 'bg-red-500'}`}></div>
             <span className="text-[10px] font-semibold text-zinc-500 uppercase">{status}</span>
+            <span className="text-[10px] font-semibold text-zinc-500 uppercase">| CPU: {cpuUsage.toFixed(1)}%</span>
           </div>
         </div>
         <button
