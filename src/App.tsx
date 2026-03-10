@@ -76,7 +76,7 @@ const ChatbotInstance = forwardRef<any, { id: number, name: string, port: number
   useEffect(() => {
     checkStatus();
     fetchModel();
-    const interval = setInterval(checkStatus, 2000);
+    const interval = setInterval(checkStatus, 1000); // 1 second frontend polling
     return () => clearInterval(interval);
   }, [id]);
 
@@ -185,34 +185,42 @@ const ChatbotInstance = forwardRef<any, { id: number, name: string, port: number
   };
 
   useEffect(() => {
-    let timeoutId: NodeJS.Timeout;
+    const timeouts: (NodeJS.Timeout | null)[] = [null, null, null, null, null];
 
-    const runCycle = async () => {
+    const runWorker = async (index: number) => {
       if (!autoRunRef.current) return;
 
-      const promises = chatbotsRef.current.map(async (cb, index) => {
-        const chatbotPrompts = PROMPTS_PER_INSTANCE[id][index];
-        if (cb.isGenerating || cb.currentPromptIndex >= chatbotPrompts.length) return;
-        
-        const prompt = chatbotPrompts[cb.currentPromptIndex];
-        await generateResponse(index, prompt);
-        
-        if (!autoRunRef.current) return;
+      const cb = chatbotsRef.current[index];
+      const chatbotPrompts = PROMPTS_PER_INSTANCE[id][index];
 
-        setChatbots(prev => prev.map((c, i) => i === index ? { ...c, currentPromptIndex: c.currentPromptIndex + 1 } : c));
-      });
-
-      await Promise.all(promises);
-
-      if (autoRunRef.current && chatbotsRef.current.some(cb => cb.currentPromptIndex < PROMPTS_PER_INSTANCE[id][cb.id].length)) {
-        timeoutId = setTimeout(runCycle, 1000);
-      } else {
-        setIsAutoRunning(false);
+      if (cb.currentPromptIndex >= chatbotPrompts.length) {
+        // Check if all workers in this instance are finished
+        const allDone = chatbotsRef.current.every((c, i) => c.currentPromptIndex >= PROMPTS_PER_INSTANCE[id][i].length);
+        if (allDone) setIsAutoRunning(false);
+        return;
       }
+
+      const prompt = chatbotPrompts[cb.currentPromptIndex];
+      await generateResponse(index, prompt);
+
+      if (!autoRunRef.current) return;
+      
+      setChatbots(prev => prev.map((c, i) => i === index ? { ...c, currentPromptIndex: c.currentPromptIndex + 1 } : c));
+      
+      // Schedule next prompt for THIS specific worker independently
+      timeouts[index] = setTimeout(() => runWorker(index), 1000);
     };
 
-    if (isAutoRunning) runCycle();
-    return () => clearTimeout(timeoutId);
+    if (isAutoRunning) {
+      // Start all 5 workers independently (Non-Wave Approach)
+      for (let i = 0; i < 5; i++) {
+        runWorker(i);
+      }
+    }
+
+    return () => {
+      timeouts.forEach(t => t && clearTimeout(t));
+    };
   }, [isAutoRunning, id]);
 
   const getInstanceIcon = () => {
