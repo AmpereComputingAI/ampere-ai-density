@@ -20,6 +20,7 @@ const ChatbotInstance = forwardRef<any, { id: number, name: string, port: number
   const [isAutoRunning, setIsAutoRunning] = useState(false);
   const [status, setStatus] = useState<'online' | 'offline' | 'checking'>('checking');
   const [model, setModel] = useState<string>('Loading...');
+  const [cpuUsage, setCpuUsage] = useState(0);
   
   const [chatbots, setChatbots] = useState(Array.from({ length: 5 }, (_, i) => ({
     id: i,
@@ -75,7 +76,7 @@ const ChatbotInstance = forwardRef<any, { id: number, name: string, port: number
   useEffect(() => {
     checkStatus();
     fetchModel();
-    const interval = setInterval(checkStatus, 10000);
+    const interval = setInterval(checkStatus, 5000);
     return () => clearInterval(interval);
   }, [id]);
 
@@ -84,8 +85,10 @@ const ChatbotInstance = forwardRef<any, { id: number, name: string, port: number
       const res = await fetch(`/api/status/${id}`);
       const data = await res.json();
       setStatus(data.status);
+      setCpuUsage(data.cpu_usage || 0);
     } catch (e) {
       setStatus('offline');
+      setCpuUsage(0);
     }
   };
 
@@ -245,14 +248,31 @@ const ChatbotInstance = forwardRef<any, { id: number, name: string, port: number
         </div>
       </div>
       
-      <div className="px-5 py-2.5 bg-[#161618] border-b border-zinc-800 flex justify-between items-center group-hover:bg-zinc-800/30 transition-all">
-        <div className="flex items-center gap-2 text-[10px] text-zinc-400 uppercase tracking-widest font-bold">
-          <Zap size={10} className="text-indigo-500" />
-          <span>Throughput</span>
+      <div className="px-5 py-3 bg-[#161618] border-b border-zinc-800 flex flex-col gap-2.5">
+        <div className="flex justify-between items-center">
+          <div className="flex items-center gap-2 text-[10px] text-zinc-400 uppercase tracking-widest font-bold">
+            <Cpu size={10} className="text-indigo-500" />
+            <span>CPU Load</span>
+          </div>
+          <span className={`font-black text-[10px] font-mono ${cpuUsage > 80 ? 'text-rose-500' : cpuUsage > 40 ? 'text-amber-500' : 'text-emerald-500'}`}>
+            {cpuUsage.toFixed(1)}%
+          </span>
         </div>
-        <span className="font-black text-xs text-zinc-100 font-mono bg-zinc-900 px-2 py-0.5 rounded border border-zinc-800">
-          {chatbots.reduce((acc, cb) => acc + cb.metrics.avgTokensPerSecond, 0).toFixed(2)} <span className="text-[9px] font-normal text-zinc-500 ml-0.5">TPS</span>
-        </span>
+        <div className="w-full h-1 bg-zinc-900 rounded-full overflow-hidden border border-zinc-800/50">
+          <div 
+            className={`h-full transition-all duration-1000 ease-out rounded-full ${cpuUsage > 80 ? 'bg-rose-500' : cpuUsage > 40 ? 'bg-amber-500' : 'bg-emerald-500'}`}
+            style={{ width: `${cpuUsage}%` }}
+          ></div>
+        </div>
+        <div className="flex justify-between items-center mt-1">
+          <div className="flex items-center gap-2 text-[10px] text-zinc-400 uppercase tracking-widest font-bold">
+            <Zap size={10} className="text-indigo-500" />
+            <span>Throughput</span>
+          </div>
+          <span className="font-black text-xs text-zinc-100 font-mono bg-zinc-900 px-2 py-0.5 rounded border border-zinc-800">
+            {chatbots.reduce((acc, cb) => acc + cb.metrics.avgTokensPerSecond, 0).toFixed(2)} <span className="text-[9px] font-normal text-zinc-500 ml-0.5">TPS</span>
+          </span>
+        </div>
       </div>
       
       <div className="flex-1 flex flex-col gap-3 p-3 overflow-y-auto custom-scrollbar">
@@ -270,7 +290,7 @@ const ChatbotInstance = forwardRef<any, { id: number, name: string, port: number
             <div className="flex flex-col flex-1 overflow-hidden">
               <div ref={el => promptRefs.current[index] = el} className="h-10 border-b border-zinc-800/30 overflow-y-auto p-2 bg-zinc-900/20">
                 {cb.messages.filter(m => m.role === 'user').slice(-1).map(msg => (
-                  <div key={msg.id} className="text-[11px] text-zinc-400 italic flex gap-1.5 group/prompt">
+                  <div key={msg.id} className="text-[11px] text-zinc-400 italic flex gap-1.5">
                     <User size={10} className="mt-0.5 text-zinc-600 shrink-0" />
                     <span className="truncate" title={msg.content}>{msg.content}</span>
                   </div>
