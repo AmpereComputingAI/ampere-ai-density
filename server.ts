@@ -34,7 +34,6 @@ async function getContainerStats(containerName: string) {
       res.on("data", (chunk) => data += chunk);
       res.on("end", () => {
         try {
-          if (res.statusCode !== 200) throw new Error(`Status ${res.statusCode}`);
           resolve(JSON.parse(data));
         } catch (e) {
           reject(e);
@@ -50,37 +49,40 @@ async function getContainerStats(containerName: string) {
 // Background task to poll CPU stats
 async function pollCpuStats() {
   setInterval(async () => {
-    const ids = ["1", "2", "3", "4"];
-    await Promise.all(ids.map(async (id) => {
-      const i = parseInt(id);
+    for (let i = 1; i <= 4; i++) {
       try {
-        let stats;
-        try {
-          // Docker Compose typically uses this format: [project]-[service]-[index]
-          stats = await getContainerStats(`ai-density-llama-cpp-${i}-1`);
-        } catch (e) {
-          // Fallback to plain service name
-          stats = await getContainerStats(`llama-cpp-${i}`);
-        }
+        const stats = await getContainerStats(`ai-density-llama-cpp-${i}-1`);
         
         const cpuDelta = stats.cpu_stats.cpu_usage.total_usage - stats.precpu_stats.cpu_usage.total_usage;
         const systemDelta = stats.cpu_stats.system_cpu_usage - stats.precpu_stats.system_cpu_usage;
         const numCpus = stats.cpu_stats.online_cpus || 1;
 
         if (systemDelta > 0 && cpuDelta > 0) {
-          // Standard Docker formula for CPU % across all host cores
+          // Standard Docker formula for CPU % across all cores
           const hostPercent = (cpuDelta / systemDelta) * numCpus * 100.0;
           // Normalize to assigned 32 cores for this instance
           const instancePercent = hostPercent / 32.0;
-          cpuUsageCache[id] = Math.min(instancePercent, 100.0);
+          cpuUsageCache[i.toString()] = Math.min(instancePercent, 100.0);
         } else {
-          cpuUsageCache[id] = 0;
+          cpuUsageCache[i.toString()] = 0;
         }
       } catch (error) {
-        cpuUsageCache[id] = 0;
+        // Fallback: try alternative name format if the first one fails
+        try {
+          const stats = await getContainerStats(`llama-cpp-${i}`);
+          const cpuDelta = stats.cpu_stats.cpu_usage.total_usage - stats.precpu_stats.cpu_usage.total_usage;
+          const systemDelta = stats.cpu_stats.system_cpu_usage - stats.precpu_stats.system_cpu_usage;
+          const numCpus = stats.cpu_stats.online_cpus || 1;
+          if (systemDelta > 0) {
+             const hostPercent = (cpuDelta / systemDelta) * numCpus * 100.0;
+             cpuUsageCache[i.toString()] = Math.min(hostPercent / 32.0, 100.0);
+          }
+        } catch (e) {
+          cpuUsageCache[i.toString()] = 0;
+        }
       }
-    }));
-  }, 1000); // Poll every 1 second in parallel
+    }
+  }, 2000); // Poll every 2 seconds
 }
 
 async function startServer() {
