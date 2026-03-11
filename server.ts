@@ -46,6 +46,7 @@ async function dockerApi(path: string) {
 
 // Identify containers and their cgroup paths
 async function resolveContainers() {
+  console.log("[BACKEND] Resolving Docker containers...");
   const dockerContainers = await dockerApi("/containers/json");
   for (let i = 1; i <= 4; i++) {
     const namePattern = `llama-cpp-${i}`;
@@ -58,11 +59,9 @@ async function resolveContainers() {
       const details = await dockerApi(`/containers/${container.Id}/json`);
       const longId = details.Id;
       
-      // Common cgroup v2 paths for Docker
       const possiblePaths = [
         `/sys/fs/cgroup/system.slice/docker-${longId}.scope/cpu.stat`,
-        `/sys/fs/cgroup/docker/${longId}/cpu.stat`,
-        `/sys/fs/cgroup/system.slice/docker-${longId}.scope/cpu.stat`
+        `/sys/fs/cgroup/docker/${longId}/cpu.stat`
       ];
 
       let validPath = null;
@@ -80,7 +79,9 @@ async function resolveContainers() {
         lastUsageUsec: 0,
         lastTime: Date.now()
       };
-      console.log(`Resolved Instance ${i} to container ${longId.substring(0, 12)} (Path: ${validPath})`);
+      console.log(`[BACKEND] Resolved Instance ${i} -> ${longId.substring(0, 12)} (Path: ${validPath})`);
+    } else {
+      console.warn(`[BACKEND] WARNING: Could not resolve container for Instance ${i}`);
     }
   }
 }
@@ -98,8 +99,10 @@ function readCpuUsage(cgroupPath: string): number {
 async function pollCpuStats() {
   await resolveContainers();
 
+  console.log("[BACKEND] Starting CPU polling loop (5s interval)...");
   setInterval(() => {
     const now = Date.now();
+    console.log(`[BACKEND] --- Polling Cycle Start (${new Date(now).toLocaleTimeString()}) ---`);
     for (const id in containers) {
       const container = containers[id];
       if (!container.cgroupPath) continue;
@@ -109,16 +112,15 @@ async function pollCpuStats() {
       const deltaUsageUsec = currentUsageUsec - container.lastUsageUsec;
 
       if (deltaTimeUsec > 0 && container.lastUsageUsec > 0) {
-        // (Usage Delta / Time Delta) * 100 = % of total system (all cores)
-        // Then divide by 32 to get % of the assigned 32-core cpuset
         const utilPercent = (deltaUsageUsec / deltaTimeUsec) * 100 / 32.0;
         cpuUsageCache[id] = Math.min(Math.max(utilPercent, 0), 100.0);
+        console.log(`[BACKEND] Instance ${id} CPU: ${cpuUsageCache[id].toFixed(2)}%`);
       }
 
       container.lastUsageUsec = currentUsageUsec;
       container.lastTime = now;
     }
-  }, 5000); // 5s polling for smoother averaging
+  }, 5000);
 }
 
 async function startServer() {
@@ -126,8 +128,8 @@ async function startServer() {
   const PORT = 3000;
   app.use(express.json());
 
-  console.log("Server starting...");
-  pollCpuStats().catch(err => console.error("CPU monitoring initialization failed:", err));
+  console.log("[BACKEND] Server starting...");
+  pollCpuStats().catch(err => console.error("[BACKEND] ERROR: CPU monitoring failed:", err));
 
   const getLlamaUrl = (id: string) => {
     const envVar = `LLAMA_API_URL_${id}`;
@@ -151,6 +153,7 @@ async function startServer() {
   });
 
   app.get("/api/status/:id", async (req, res) => {
+    console.log(`[BACKEND] API: Status request for Instance ${req.params.id}`);
     try {
       const url = getLlamaUrl(req.params.id);
       const response = await fetch(`${url}/health`);
@@ -165,6 +168,7 @@ async function startServer() {
   });
 
   app.post("/api/chat/:id", async (req, res) => {
+    console.log(`[BACKEND] API: Chat request for Instance ${req.params.id}`);
     try {
       const url = getLlamaUrl(req.params.id);
       const { prompt } = req.body;
@@ -192,7 +196,7 @@ async function startServer() {
     app.get("*", (req, res) => res.sendFile(path.resolve(__dirname, "dist", "index.html")));
   }
 
-  app.listen(PORT, "0.0.0.0", () => console.log(`Server running on http://localhost:${PORT}`));
+  app.listen(PORT, "0.0.0.0", () => console.log(`[BACKEND] Listening on http://localhost:${PORT}`));
 }
 
 startServer();
