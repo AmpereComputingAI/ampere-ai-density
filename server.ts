@@ -102,20 +102,27 @@ const getLlamaUrl = (id: string) => {
 async function pollStats() {
   await resolveContainers();
 
+  console.log("[BACKEND] Starting Parallel CPU polling loop (2s interval)...");
+  
   setInterval(async () => {
     const now = Date.now();
-    console.log(`[BACKEND] --- Broadcast Cycle: ${new Date(now).toLocaleTimeString()} ---`);
-    for (let i = 1; i <= 4; i++) {
+    
+    // Process all instances in parallel
+    const pollPromises = [1, 2, 3, 4].map(async (i) => {
       const id = i.toString();
       
-      // Update Status (Health)
-      try {
-        const url = getLlamaUrl(id);
-        const res = await fetch(`${url}/health`, { signal: AbortSignal.timeout(1000) });
-        clusterStats[id].status = res.ok ? "online" : "offline";
-      } catch (e) { clusterStats[id].status = "offline"; }
+      // 1. Parallel Health Check
+      const healthPromise = (async () => {
+        try {
+          const url = getLlamaUrl(id);
+          const res = await fetch(`${url}/health`, { signal: AbortSignal.timeout(1000) });
+          clusterStats[id].status = res.ok ? "online" : "offline";
+        } catch (e) {
+          clusterStats[id].status = "offline";
+        }
+      })();
 
-      // Update CPU
+      // 2. Immediate CPU Read (no network wait)
       const container = containers[id];
       if (container?.cgroupPath) {
         const currentUsageUsec = readCpuUsage(container.cgroupPath);
@@ -125,17 +132,23 @@ async function pollStats() {
         if (deltaTimeUsec > 0 && container.lastUsageUsec > 0) {
           const utilPercent = (deltaUsageUsec / deltaTimeUsec) * 100 / 32.0;
           clusterStats[id].cpu = Math.min(Math.max(utilPercent, 0), 100.0);
-          console.log(`[BACKEND] Instance ${id}: ${clusterStats[id].cpu.toFixed(1)}% (Status: ${clusterStats[id].status})`);
         }
         container.lastUsageUsec = currentUsageUsec;
         container.lastTime = now;
       }
-    }
+
+      return healthPromise; // Wait for the health check to finish for this specific instance
+    });
+
+    // Wait for all 4 instances to finish their work
+    await Promise.all(pollPromises);
+
+    console.log(`[BACKEND] Broadcast Cycle: ${new Date(now).toLocaleTimeString()} | 1:${clusterStats["1"].cpu.toFixed(1)}% | 2:${clusterStats["2"].cpu.toFixed(1)}% | 3:${clusterStats["3"].cpu.toFixed(1)}% | 4:${clusterStats["4"].cpu.toFixed(1)}%`);
 
     // Broadcast to all SSE clients
     const data = JSON.stringify(clusterStats);
     clients.forEach(client => client.res.write(`data: ${data}\n\n`));
-  }, 2000); // SSE updates every 2 seconds
+  }, 2000); 
 }
 
 async function startServer() {
