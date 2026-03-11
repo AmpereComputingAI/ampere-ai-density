@@ -34,6 +34,9 @@ async function getContainerStats(containerName: string) {
       res.on("data", (chunk) => data += chunk);
       res.on("end", () => {
         try {
+          if (res.statusCode !== 200) {
+            return reject(new Error(`Docker API error: ${res.statusCode}`));
+          }
           resolve(JSON.parse(data));
         } catch (e) {
           reject(e);
@@ -46,42 +49,46 @@ async function getContainerStats(containerName: string) {
   });
 }
 
+// Function to update stats for all containers in parallel
+async function updateCpuStats() {
+  const promises = [1, 2, 3, 4].map(async (i) => {
+    try {
+      // Try common container name formats
+      let stats;
+      try {
+        stats = await getContainerStats(`ai-density-llama-cpp-${i}-1`);
+      } catch (e) {
+        stats = await getContainerStats(`llama-cpp-${i}`);
+      }
+      
+      const cpuDelta = stats.cpu_stats.cpu_usage.total_usage - stats.precpu_stats.cpu_usage.total_usage;
+      const systemDelta = stats.cpu_stats.system_cpu_usage - stats.precpu_stats.system_cpu_usage;
+      const numCpus = stats.cpu_stats.online_cpus || 1;
+
+      if (systemDelta > 0 && cpuDelta > 0) {
+        // Normalize to assigned 32 cores for this instance
+        const hostPercent = (cpuDelta / systemDelta) * numCpus * 100.0;
+        const instancePercent = hostPercent / 32.0;
+        cpuUsageCache[i.toString()] = Math.min(instancePercent, 100.0);
+      } else {
+        cpuUsageCache[i.toString()] = 0;
+      }
+    } catch (error) {
+      cpuUsageCache[i.toString()] = 0;
+    }
+  });
+
+  await Promise.all(promises);
+}
+
 // Background task to poll CPU stats
 async function pollCpuStats() {
+  // Initial update
+  await updateCpuStats();
+  
+  // Schedule periodic updates
   setInterval(async () => {
-    for (let i = 1; i <= 4; i++) {
-      try {
-        const stats = await getContainerStats(`ai-density-llama-cpp-${i}-1`);
-        
-        const cpuDelta = stats.cpu_stats.cpu_usage.total_usage - stats.precpu_stats.cpu_usage.total_usage;
-        const systemDelta = stats.cpu_stats.system_cpu_usage - stats.precpu_stats.system_cpu_usage;
-        const numCpus = stats.cpu_stats.online_cpus || 1;
-
-        if (systemDelta > 0 && cpuDelta > 0) {
-          // Standard Docker formula for CPU % across all cores
-          const hostPercent = (cpuDelta / systemDelta) * numCpus * 100.0;
-          // Normalize to assigned 32 cores for this instance
-          const instancePercent = hostPercent / 32.0;
-          cpuUsageCache[i.toString()] = Math.min(instancePercent, 100.0);
-        } else {
-          cpuUsageCache[i.toString()] = 0;
-        }
-      } catch (error) {
-        // Fallback: try alternative name format if the first one fails
-        try {
-          const stats = await getContainerStats(`llama-cpp-${i}`);
-          const cpuDelta = stats.cpu_stats.cpu_usage.total_usage - stats.precpu_stats.cpu_usage.total_usage;
-          const systemDelta = stats.cpu_stats.system_cpu_usage - stats.precpu_stats.system_cpu_usage;
-          const numCpus = stats.cpu_stats.online_cpus || 1;
-          if (systemDelta > 0) {
-             const hostPercent = (cpuDelta / systemDelta) * numCpus * 100.0;
-             cpuUsageCache[i.toString()] = Math.min(hostPercent / 32.0, 100.0);
-          }
-        } catch (e) {
-          cpuUsageCache[i.toString()] = 0;
-        }
-      }
-    }
+    await updateCpuStats();
   }, 2000); // Poll every 2 seconds
 }
 
@@ -92,7 +99,8 @@ async function startServer() {
   app.use(express.json());
 
   console.log("Server starting...");
-  pollCpuStats().catch(console.error);
+  // Start polling immediately
+  pollCpuStats().catch(err => console.error("CPU polling failed:", err));
 
   const getLlamaUrl = (id: string) => {
     const envVar = `LLAMA_API_URL_${id}`;
