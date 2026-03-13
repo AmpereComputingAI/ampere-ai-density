@@ -248,25 +248,47 @@ const ChatbotInstance = forwardRef<any, { id: number, name: string, port: number
         </div>
       </div>
       
-      <div className="px-5 py-3 bg-[#161618] border-b border-zinc-800 flex flex-col gap-2.5">
+      <div className="px-5 py-4 bg-[#161618] border-b border-zinc-800 flex flex-col gap-4">
         <div className="flex justify-between items-center">
-          <div className="flex items-center gap-2 text-[10px] text-zinc-400 uppercase tracking-widest font-bold">
-            <Cpu size={10} className="text-indigo-500" />
-            <span>CPU Load</span>
+          <div className="flex items-center gap-2 text-[10px] text-zinc-400 uppercase tracking-[0.2em] font-bold">
+            <Cpu size={12} className="text-indigo-500" />
+            <span>Compute Core Matrix</span>
           </div>
-          <span className={`font-black text-[10px] font-mono ${cpuUsage > 80 ? 'text-rose-500' : cpuUsage > 40 ? 'text-amber-500' : 'text-emerald-500'}`}>
+          <span className={`font-black text-[11px] font-mono bg-zinc-900/50 px-2 py-0.5 rounded border border-zinc-800 ${cpuUsage > 80 ? 'text-rose-500 border-rose-500/20' : cpuUsage > 40 ? 'text-amber-500 border-amber-500/20' : 'text-emerald-500 border-emerald-500/20'}`}>
             {cpuUsage.toFixed(1)}%
           </span>
         </div>
-        <div className="w-full h-1 bg-zinc-900 rounded-full overflow-hidden border border-zinc-800/50">
-          <div 
-            className={`h-full transition-all duration-1000 ease-out rounded-full ${cpuUsage > 80 ? 'bg-rose-500' : cpuUsage > 40 ? 'bg-amber-500' : 'bg-emerald-500'}`}
-            style={{ width: `${cpuUsage}%` }}
-          ></div>
+
+        <div className="grid grid-cols-8 gap-1.5 p-2.5 bg-black/40 rounded-xl border border-zinc-800/50 shadow-inner">
+          {Array.from({ length: 32 }).map((_, i) => {
+            const activeThreshold = (cpuUsage / 100) * 32;
+            const isActive = i < activeThreshold;
+            const intensity = isActive ? Math.min(1, activeThreshold - i) : 0;
+            
+            return (
+              <div 
+                key={i} 
+                className="h-2 rounded-[2px] transition-all duration-1000 relative overflow-hidden bg-zinc-900/50"
+              >
+                {isActive && (
+                  <div 
+                    className={`absolute inset-0 transition-opacity duration-1000 ${
+                      cpuUsage > 80 ? 'bg-rose-500' : cpuUsage > 40 ? 'bg-amber-500' : 'bg-emerald-500'
+                    }`}
+                    style={{ 
+                      opacity: intensity * 0.6 + (Math.random() * 0.4),
+                      boxShadow: intensity > 0.8 ? `0 0 10px ${cpuUsage > 80 ? '#f43f5e' : cpuUsage > 40 ? '#f59e0b' : '#10b981'}` : 'none'
+                    }}
+                  />
+                )}
+              </div>
+            );
+          })}
         </div>
-        <div className="flex justify-between items-center mt-1">
-          <div className="flex items-center gap-2 text-[10px] text-zinc-400 uppercase tracking-widest font-bold">
-            <Zap size={10} className="text-indigo-500" />
+
+        <div className="flex justify-between items-center">
+          <div className="flex items-center gap-2 text-[10px] text-zinc-400 uppercase tracking-[0.2em] font-bold">
+            <Zap size={12} className="text-indigo-500" />
             <span>Throughput</span>
           </div>
           <span className="font-black text-xs text-zinc-100 font-mono bg-zinc-900 px-2 py-0.5 rounded border border-zinc-800">
@@ -356,103 +378,101 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#09090b] text-zinc-100 font-sans p-4 md:p-8 selection:bg-indigo-500/30">
       <div className="max-w-[1700px] mx-auto">
-        <header className="flex flex-col md:flex-row items-center justify-between mb-16 gap-8 border-b border-zinc-800/50 pb-12">
-          <div className="flex items-center gap-10">
-            <div className="relative">
-              <div className="absolute inset-0 bg-indigo-500 blur-[80px] opacity-20 animate-pulse"></div>
+        <header className="flex flex-col items-center mb-20">
+          <div className="relative group/logo mb-10">
+            <div className="absolute inset-0 bg-indigo-500 blur-[100px] opacity-20 animate-pulse"></div>
+            <div className="relative bg-white px-6 py-3 rounded-2xl border border-white/10 shadow-[0_0_50px_-12px_rgba(255,255,255,0.3)] transition-transform group-hover/logo:scale-105 duration-500">
               <img 
                 src="/ampere-logo.svg" 
                 alt="Ampere Logo" 
-                className="w-48 h-12 relative"
+                className="h-10 w-auto relative object-contain"
               />
             </div>
-            <div className="h-12 w-px bg-zinc-800 hidden md:block"></div>
-            <div className="flex flex-col">
-              <h1 className="text-3xl font-black tracking-tight text-white mb-2 uppercase">
-                LLM <span className="italic" style={{ color: '#F83821' }}>Orchestrator</span>
-              </h1>
-              <p className="text-zinc-500 text-sm font-medium tracking-wide">
-                High-Density Enterprise Inference <span className="text-zinc-700 mx-2">|</span> Powered by AmpereOne® M CPUs
-              </p>
-            </div>
           </div>
-
-          <div className="flex items-center gap-4">
-             <div className="flex flex-col items-end mr-6">
-                <div className="flex items-center gap-2 text-[10px] text-zinc-500 font-bold uppercase tracking-[0.2em] mb-1">
-                  <Activity size={10} className="text-indigo-500" />
-                  Cluster Health
-                </div>
-                <div className="text-sm font-mono text-emerald-400 flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
-                  SYSTEMS OPTIMAL
-                </div>
-             </div>
+          
+          <div className="flex flex-col items-center text-center max-w-3xl">
+            <h1 className="text-5xl md:text-6xl font-black tracking-tighter text-white mb-6 uppercase">
+              LLM <span className="italic" style={{ color: '#F83821' }}>Orchestrator</span>
+            </h1>
+            <p className="text-zinc-400 text-lg font-medium tracking-wide mb-8">
+              High-Density Enterprise Inference <span className="text-zinc-800 mx-3">|</span> Powered by AmpereOne® M CPUs
+            </p>
+            
+            <div className="flex items-center gap-3 bg-[#121214] px-5 py-2 rounded-full border border-zinc-800/50 shadow-inner">
+              <Activity size={14} className="text-emerald-500" />
+              <span className="text-[11px] font-black text-zinc-500 uppercase tracking-[0.2em]">Cluster Health:</span>
+              <span className="text-[11px] font-mono text-emerald-400 font-bold uppercase tracking-widest">Systems Optimal</span>
+            </div>
           </div>
         </header>
 
-        <section className="mb-12 relative overflow-hidden bg-[#121214] rounded-3xl border border-zinc-800/80 p-8 shadow-2xl">
+        <section className="mb-12 relative overflow-hidden bg-[#121214] rounded-[2.5rem] border border-zinc-800/80 p-10 shadow-2xl">
           <div className="absolute top-0 right-0 p-8 opacity-5">
-            <BarChart3 size={120} className="text-indigo-500" />
+            <BarChart3 size={160} className="text-indigo-500" />
           </div>
           
-          <div className="flex flex-col md:flex-row items-center justify-between gap-12 relative z-10">
-            <div className="grid grid-cols-2 gap-12 flex-1 max-w-2xl">
-              <div className="flex flex-col gap-3">
-                <div className="flex items-center gap-2 text-[11px] font-black text-indigo-400 uppercase tracking-[0.3em]">
-                  <Zap size={12} className="fill-indigo-400" />
+          <div className="flex flex-col lg:flex-row items-center justify-between gap-16 relative z-10">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-16 flex-1 w-full lg:w-auto">
+              <div className="flex flex-col gap-4">
+                <div className="flex items-center gap-2 text-[12px] font-black text-indigo-400 uppercase tracking-[0.3em]">
+                  <Zap size={14} className="fill-indigo-400" />
                   Real-time Throughput
                 </div>
-                <div className="flex items-baseline gap-3">
-                  <span className="text-6xl font-black text-white font-mono tabular-nums leading-none tracking-tighter">
+                <div className="flex items-baseline gap-4">
+                  <span className="text-7xl font-black text-white font-mono tabular-nums leading-none tracking-tighter">
                     {totalTPS.toFixed(1)}
                   </span>
-                  <span className="text-lg font-bold text-zinc-600 uppercase">Tokens / Sec</span>
+                  <span className="text-xl font-bold text-zinc-600 uppercase tracking-widest">TPS</span>
                 </div>
               </div>
               
-              <div className="flex flex-col gap-3 border-l border-zinc-800 pl-12">
-                <div className="flex items-center gap-2 text-[11px] font-black text-zinc-500 uppercase tracking-[0.3em]">
-                  <ChevronRight size={12} className="text-indigo-500" />
+              <div className="flex flex-col gap-4 md:border-l border-zinc-800 md:pl-16">
+                <div className="flex items-center gap-2 text-[12px] font-black text-zinc-500 uppercase tracking-[0.3em]">
+                  <ChevronRight size={14} className="text-indigo-500" />
                   Session Peak
                 </div>
-                <div className="flex items-baseline gap-3">
-                  <span className="text-6xl font-black text-zinc-300 font-mono tabular-nums leading-none tracking-tighter">
+                <div className="flex items-baseline gap-4">
+                  <span className="text-7xl font-black text-zinc-300 font-mono tabular-nums leading-none tracking-tighter">
                     {peakTPS.toFixed(1)}
                   </span>
-                  <span className="text-lg font-bold text-zinc-700 uppercase">TPS</span>
+                  <span className="text-xl font-bold text-zinc-700 uppercase tracking-widest">TPS</span>
                 </div>
               </div>
             </div>
 
             <button
               onClick={handleToggleAll}
-              className={`group relative flex items-center justify-center gap-4 px-12 py-5 rounded-2xl font-black uppercase tracking-widest transition-all shadow-[0_20px_40px_-12px_rgba(0,0,0,0.5)] active:scale-[0.98] ${
+              className={`group relative flex items-center justify-center gap-5 px-16 py-6 rounded-3xl font-black uppercase tracking-[0.2em] transition-all shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)] active:scale-[0.96] ${
                 anyRunning 
                   ? 'bg-red-950/20 text-red-500 border border-red-500/50 hover:bg-red-500 hover:text-white' 
                   : 'bg-indigo-600 text-white hover:bg-indigo-500 hover:-translate-y-1 hover:shadow-indigo-500/20'
               }`}
             >
-              {anyRunning ? <Square size={22} fill="currentColor" /> : <Play size={22} fill="currentColor" />}
-              <span className="text-lg">{anyRunning ? 'Stop Cluster' : 'Start Cluster'}</span>
-              <div className={`absolute -inset-1 rounded-[18px] opacity-0 blur group-hover:opacity-30 transition-all ${anyRunning ? 'bg-red-500' : 'bg-indigo-500'}`}></div>
+              {anyRunning ? <Square size={24} fill="currentColor" /> : <Play size={24} fill="currentColor" />}
+              <span className="text-xl">{anyRunning ? 'Stop Cluster' : 'Start Cluster'}</span>
+              <div className={`absolute -inset-1.5 rounded-[2.2rem] opacity-0 blur-xl group-hover:opacity-40 transition-all ${anyRunning ? 'bg-red-500' : 'bg-indigo-500'}`}></div>
             </button>
           </div>
         </section>
 
-        <main className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <main className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
           <ChatbotInstance ref={instanceRefs[0]} id={1} name="Legal & Compliance Expert" port={8080} onRunningChange={(r) => handleRunningChange(0, r)} onTPSChange={(tps) => handleTPSChange(0, tps)} />
           <ChatbotInstance ref={instanceRefs[1]} id={2} name="Cybersecurity Expert" port={8081} onRunningChange={(r) => handleRunningChange(1, r)} onTPSChange={(tps) => handleTPSChange(1, tps)} />
           <ChatbotInstance ref={instanceRefs[2]} id={3} name="Fintech & Finance Expert" port={8082} onRunningChange={(r) => handleRunningChange(2, r)} onTPSChange={(tps) => handleTPSChange(2, tps)} />
           <ChatbotInstance ref={instanceRefs[3]} id={4} name="Supply Chain & Ops Expert" port={8083} onRunningChange={(r) => handleRunningChange(3, r)} onTPSChange={(tps) => handleTPSChange(3, tps)} />
         </main>
 
-        <footer className="mt-20 border-t border-zinc-800/50 pt-10 text-center">
-          <div className="inline-flex items-center gap-3 bg-[#121214] px-6 py-2 rounded-full border border-zinc-800 shadow-sm">
-            <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
-            <span className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em]">Deployment State: Production Grade</span>
-            <span className="text-zinc-700 mx-2">|</span>
-            <span className="text-[10px] text-zinc-600 font-mono">Build v3.4.2-A1</span>
+        <footer className="mt-32 border-t border-zinc-800/50 pt-16 text-center">
+          <div className="inline-flex flex-col md:flex-row items-center gap-6">
+            <div className="flex items-center gap-3 bg-[#121214] px-6 py-2 rounded-full border border-zinc-800 shadow-sm">
+              <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
+              <span className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em]">Deployment State: Production Grade</span>
+              <span className="text-zinc-700 mx-2">|</span>
+              <span className="text-[10px] text-zinc-600 font-mono">Build v3.4.2-A1</span>
+            </div>
+            <div className="text-[10px] text-zinc-700 uppercase tracking-[0.3em] font-bold">
+              © 2024 Ampere Computing LLC
+            </div>
           </div>
         </footer>
       </div>
