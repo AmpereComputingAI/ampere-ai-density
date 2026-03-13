@@ -189,7 +189,6 @@ const ChatbotInstance = forwardRef<any, { id: number, name: string, port: number
 
   useEffect(() => {
     let timeoutId: NodeJS.Timeout;
-    let iterationCount = 0;
 
     const runCycle = async () => {
       if (!autoRunRef.current) return;
@@ -211,25 +210,17 @@ const ChatbotInstance = forwardRef<any, { id: number, name: string, port: number
       if (!autoRunRef.current) return;
 
       // Check if all chatbots have finished their 5 prompts
-      const allFinishedCurrentSet = chatbotsRef.current.every(cb => cb.currentPromptIndex >= PROMPTS_PER_INSTANCE[id][cb.id].length);
+      const allFinished = chatbotsRef.current.every(cb => cb.currentPromptIndex >= PROMPTS_PER_INSTANCE[id][cb.id].length);
 
-      if (allFinishedCurrentSet) {
-        iterationCount++;
-        if (iterationCount < 5) {
-          // Reset indices for the next iteration
-          setChatbots(prev => prev.map(cb => ({ ...cb, currentPromptIndex: 0 })));
-          timeoutId = setTimeout(runCycle, 1000); // 1 sec delay between full sets of 5
-        } else {
-          setIsAutoRunning(false);
-        }
+      if (allFinished) {
+        setIsAutoRunning(false);
       } else {
         // Continue with the next prompt in the current set immediately
-        runCycle();
+        timeoutId = setTimeout(runCycle, 100); 
       }
     };
 
     if (isAutoRunning) {
-      iterationCount = 0;
       runCycle();
     }
     return () => clearTimeout(timeoutId);
