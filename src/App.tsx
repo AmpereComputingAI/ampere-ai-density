@@ -354,103 +354,88 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#09090b] text-zinc-100 font-sans p-4 md:p-8 selection:bg-indigo-500/30">
-      <div className="max-w-[1700px] mx-auto">
-        <header className="flex flex-col items-center mb-20">
-          <div className="relative group/logo mb-10">
-            <div className="absolute inset-0 bg-indigo-500 blur-[100px] opacity-20 animate-pulse"></div>
-            <div className="relative bg-white px-6 py-3 rounded-2xl border border-white/10 shadow-[0_0_50px_-12px_rgba(255,255,255,0.3)] transition-transform group-hover/logo:scale-105 duration-500">
-              <img 
-                src="/ampere-logo.svg" 
-                alt="Ampere Logo" 
-                className="h-10 w-auto relative object-contain"
-              />
+    <div className="min-h-screen bg-[#09090b] text-zinc-100 font-sans p-4 md:p-6 selection:bg-indigo-500/30 flex flex-col">
+      <div className="max-w-[1800px] w-full mx-auto flex flex-col flex-1">
+        {/* Compact Unified Header Strip */}
+        <header className="flex flex-col lg:flex-row items-center justify-between gap-6 bg-[#121214] border border-zinc-800/80 p-4 rounded-2xl mb-8 shadow-2xl relative overflow-hidden group">
+          <div className="absolute inset-0 bg-indigo-500/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
+          
+          {/* Brand Left */}
+          <div className="flex items-center gap-6 shrink-0">
+            <div className="relative bg-white px-3 py-1.5 rounded-lg border border-white/10 shadow-sm shrink-0">
+              <img src="/ampere-logo.svg" alt="Ampere Logo" className="h-6 w-auto object-contain" />
+            </div>
+            <div className="flex flex-col">
+              <h1 className="text-lg font-black tracking-tighter text-white uppercase leading-none mb-1">
+                LLM <span className="italic" style={{ color: '#F83821' }}>Orchestrator</span>
+              </h1>
+              <p className="text-[10px] text-zinc-500 font-bold tracking-widest uppercase truncate max-w-[200px]">
+                Powered by AmpereOne® M CPUs
+              </p>
             </div>
           </div>
-          
-          <div className="flex flex-col items-center text-center max-w-3xl">
-            <h1 className="text-5xl md:text-6xl font-black tracking-tighter text-white mb-6 uppercase">
-              LLM <span className="italic" style={{ color: '#F83821' }}>Orchestrator</span>
-            </h1>
-            <p className="text-zinc-400 text-lg font-medium tracking-wide mb-8">
-              High-Density Enterprise Inference <span className="text-zinc-800 mx-3">|</span> Powered by AmpereOne® M CPUs
-            </p>
-            
-            <div className="flex items-center gap-3 bg-[#121214] px-5 py-2 rounded-full border border-zinc-800/50 shadow-inner">
-              <Activity size={14} className="text-emerald-500" />
-              <span className="text-[11px] font-black text-zinc-500 uppercase tracking-[0.2em]">Cluster Health:</span>
-              <span className="text-[11px] font-mono text-emerald-400 font-bold uppercase tracking-widest">Systems Optimal</span>
+
+          {/* Metrics Center */}
+          <div className="flex items-center gap-8 flex-1 justify-center px-8">
+            <div className="flex flex-col items-center">
+              <div className="flex items-center gap-1.5 text-[9px] font-black text-indigo-400 uppercase tracking-[0.2em] mb-1">
+                <Zap size={10} className="fill-indigo-400" />
+                Real-time
+              </div>
+              <div className="text-3xl font-black text-white font-mono tabular-nums leading-none">
+                {totalTPS.toFixed(1)} <span className="text-[10px] text-zinc-600 font-bold ml-1">TPS</span>
+              </div>
             </div>
+            <div className="h-8 w-px bg-zinc-800"></div>
+            <div className="flex flex-col items-center">
+              <div className="flex items-center gap-1.5 text-[9px] font-black text-zinc-500 uppercase tracking-[0.2em] mb-1">
+                <ChevronRight size={10} className="text-indigo-500" />
+                Session Peak
+              </div>
+              <div className="text-3xl font-black text-zinc-400 font-mono tabular-nums leading-none">
+                {peakTPS.toFixed(1)} <span className="text-[10px] text-zinc-700 font-bold ml-1">TPS</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Controls Right */}
+          <div className="flex items-center gap-6 shrink-0">
+            <div className="flex flex-col items-end">
+              <div className="flex items-center gap-1.5 text-[9px] font-black text-zinc-500 uppercase tracking-[0.2em] mb-1">
+                <Activity size={10} className="text-emerald-500" />
+                Cluster
+              </div>
+              <span className="text-[10px] font-mono text-emerald-400 font-bold uppercase tracking-widest">Optimal</span>
+            </div>
+            <button
+              onClick={handleToggleAll}
+              className={`flex items-center gap-3 px-8 py-3 rounded-xl font-black uppercase tracking-widest text-xs transition-all shadow-lg active:scale-[0.96] ${
+                anyRunning 
+                  ? 'bg-red-950/20 text-red-500 border border-red-500/50 hover:bg-red-500 hover:text-white' 
+                  : 'bg-indigo-600 text-white hover:bg-indigo-500 hover:shadow-indigo-500/20'
+              }`}
+            >
+              {anyRunning ? <Square size={16} fill="currentColor" /> : <Play size={16} fill="currentColor" />}
+              <span>{anyRunning ? 'Stop' : 'Start'}</span>
+            </button>
           </div>
         </header>
 
-        <section className="mb-12 relative overflow-hidden bg-[#121214] rounded-[2.5rem] border border-zinc-800/80 p-10 shadow-2xl">
-          <div className="absolute top-0 right-0 p-8 opacity-5">
-            <BarChart3 size={160} className="text-indigo-500" />
-          </div>
-          
-          <div className="flex flex-col lg:flex-row items-center justify-between gap-16 relative z-10">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-16 flex-1 w-full lg:w-auto">
-              <div className="flex flex-col gap-4">
-                <div className="flex items-center gap-2 text-[12px] font-black text-indigo-400 uppercase tracking-[0.3em]">
-                  <Zap size={14} className="fill-indigo-400" />
-                  Real-time Throughput
-                </div>
-                <div className="flex items-baseline gap-4">
-                  <span className="text-7xl font-black text-white font-mono tabular-nums leading-none tracking-tighter">
-                    {totalTPS.toFixed(1)}
-                  </span>
-                  <span className="text-xl font-bold text-zinc-600 uppercase tracking-widest">TPS</span>
-                </div>
-              </div>
-              
-              <div className="flex flex-col gap-4 md:border-l border-zinc-800 md:pl-16">
-                <div className="flex items-center gap-2 text-[12px] font-black text-zinc-500 uppercase tracking-[0.3em]">
-                  <ChevronRight size={14} className="text-indigo-500" />
-                  Session Peak
-                </div>
-                <div className="flex items-baseline gap-4">
-                  <span className="text-7xl font-black text-zinc-300 font-mono tabular-nums leading-none tracking-tighter">
-                    {peakTPS.toFixed(1)}
-                  </span>
-                  <span className="text-xl font-bold text-zinc-700 uppercase tracking-widest">TPS</span>
-                </div>
-              </div>
-            </div>
-
-            <button
-              onClick={handleToggleAll}
-              className={`group relative flex items-center justify-center gap-5 px-16 py-6 rounded-3xl font-black uppercase tracking-[0.2em] transition-all shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)] active:scale-[0.96] ${
-                anyRunning 
-                  ? 'bg-red-950/20 text-red-500 border border-red-500/50 hover:bg-red-500 hover:text-white' 
-                  : 'bg-indigo-600 text-white hover:bg-indigo-500 hover:-translate-y-1 hover:shadow-indigo-500/20'
-              }`}
-            >
-              {anyRunning ? <Square size={24} fill="currentColor" /> : <Play size={24} fill="currentColor" />}
-              <span className="text-xl">{anyRunning ? 'Stop Cluster' : 'Start Cluster'}</span>
-              <div className={`absolute -inset-1.5 rounded-[2.2rem] opacity-0 blur-xl group-hover:opacity-40 transition-all ${anyRunning ? 'bg-red-500' : 'bg-indigo-500'}`}></div>
-            </button>
-          </div>
-        </section>
-
-        <main className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+        <main className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 flex-1">
           <ChatbotInstance ref={instanceRefs[0]} id={1} name="Legal & Compliance Expert" port={8080} onRunningChange={(r) => handleRunningChange(0, r)} onTPSChange={(tps) => handleTPSChange(0, tps)} />
           <ChatbotInstance ref={instanceRefs[1]} id={2} name="Cybersecurity Expert" port={8081} onRunningChange={(r) => handleRunningChange(1, r)} onTPSChange={(tps) => handleTPSChange(1, tps)} />
           <ChatbotInstance ref={instanceRefs[2]} id={3} name="Fintech & Finance Expert" port={8082} onRunningChange={(r) => handleRunningChange(2, r)} onTPSChange={(tps) => handleTPSChange(2, tps)} />
           <ChatbotInstance ref={instanceRefs[3]} id={4} name="Supply Chain & Ops Expert" port={8083} onRunningChange={(r) => handleRunningChange(3, r)} onTPSChange={(tps) => handleTPSChange(3, tps)} />
         </main>
 
-        <footer className="mt-32 border-t border-zinc-800/50 pt-16 text-center">
-          <div className="inline-flex flex-col md:flex-row items-center gap-6">
-            <div className="flex items-center gap-3 bg-[#121214] px-6 py-2 rounded-full border border-zinc-800 shadow-sm">
-              <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
-              <span className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em]">Deployment State: Production Grade</span>
-              <span className="text-zinc-700 mx-2">|</span>
-              <span className="text-[10px] text-zinc-600 font-mono">Build v3.4.2-A1</span>
-            </div>
-            <div className="text-[10px] text-zinc-700 uppercase tracking-[0.3em] font-bold">
-              © 2024 Ampere Computing LLC
-            </div>
+        <footer className="mt-12 border-t border-zinc-800/50 pt-8 flex items-center justify-between text-zinc-700">
+          <div className="text-[9px] uppercase tracking-[0.3em] font-bold">
+            © 2024 Ampere Computing LLC
+          </div>
+          <div className="flex items-center gap-4">
+            <span className="text-[9px] font-mono">Build v3.4.2-A1</span>
+            <div className="h-3 w-px bg-zinc-800"></div>
+            <span className="text-[9px] font-black uppercase tracking-widest text-zinc-600">Production Ready</span>
           </div>
         </footer>
       </div>
