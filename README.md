@@ -1,37 +1,37 @@
 # Ampere LLM Orchestrator
 
 <div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+<img width="400" alt="Ampere Logo" src="https://upload.wikimedia.org/wikipedia/commons/f/f4/Ampere_Computing_LLC_Logo.svg" />
 </div>
 
 ## Overview
 
-The **Ampere LLM Orchestrator** is a high-performance, high-density platform designed for orchestrating and monitoring multiple Large Language Model (LLM) instances on **Ampere Computing's Cloud-Native CPUs**. 
+The **Ampere LLM Orchestrator** is a high-performance, high-density platform designed for orchestrating and monitoring multiple Large Language Model (LLM) instances on **AmpereOne® M Cloud-Native CPUs**.
 
-By leveraging the multi-core architecture of Ampere Altra/Altra Max processors, this application achieves extreme throughput and density, running multiple independent `llama.cpp` servers concurrently—each isolated and pinned to specific CPU core sets.
+By leveraging the high core-count architecture of Ampere processors, this application achieves extreme throughput and density, running multiple independent `llama.cpp` servers concurrently—each isolated and pinned to specific **32-core segments** for deterministic performance.
 
 ## Key Features
 
-- **Multi-Instance Orchestration:** Deploy and manage 4+ independent `llama.cpp` server nodes simultaneously.
+- **High-Density Orchestration:** Deploy and manage 4 independent `llama.cpp` nodes simultaneously, each with its own dedicated 32-core resources.
 - **Domain-Specific AI Experts:**
   - **Legal & Compliance:** Regulatory and corporate law specialist.
   - **Cybersecurity:** Threat intelligence and network security architect.
   - **Fintech & Finance:** Algorithmic trading and financial regulation expert.
   - **Supply Chain & Ops:** Global logistics and operational resilience specialist.
-- **Real-Time Performance Monitoring:**
-  - **Cluster Throughput (TPS):** Aggregate tokens per second across all active instances.
-  - **Peak Throughput:** Tracks the highest performance achieved during the session.
-  - **Instance-Level Metrics:** Per-chatbot TPS and prompt status tracking.
-- **High-Density Execution:** Pinning individual LLM nodes to specific CPU core sets (using `cpuset`) for maximum hardware utilization.
-- **One-Click Load Simulation:** A global "Run All" feature that orchestrates 20+ parallel chatbot sessions (5 per instance).
+- **Modern Startup UI:** Sleek dark-mode dashboard with real-time performance visualization.
+- **Real-Time Performance Metrics:**
+  - **Cluster Throughput (TPS):** Aggregate tokens per second across all 20 active workers.
+  - **Peak Throughput:** Tracking session-high performance levels.
+  - **CPU Load Monitoring:** Real-time utilization stats per container, normalized to the assigned 32-core `cpuset`.
+- **Deterministic Compute:** Uses `cpuset` pinning to ensure no resource contention between AI domains.
 
 ## Architecture
 
 The system consists of a modern full-stack architecture optimized for high-density inference:
 
-- **Frontend:** React (Vite) + Tailwind CSS + Lucide Icons for a professional, real-time monitoring dashboard.
-- **Backend:** Node.js (Express) serving as an intelligent API proxy and instance manager.
-- **Inference Nodes:** Multiple `llama.cpp` servers running in Docker, each serving GGUF models fetched directly from Hugging Face.
+- **Frontend:** React (Vite) + Tailwind CSS + Lucide Icons featuring a glassmorphism "AI Startup" aesthetic.
+- **Backend:** Node.js (Express) serving as an intelligent API proxy and performance monitor.
+- **Inference Nodes:** 4x `llama.cpp` containers running in Docker, each serving specialized GGUF models.
 
 ## Getting Started
 
@@ -39,13 +39,13 @@ The system consists of a modern full-stack architecture optimized for high-densi
 
 - Docker and Docker Compose
 - Ampere-based Cloud Instance (OCI A1, AWS M6g/C6g/R6g, GCP T2A, etc.)
-- (Optional) Node.js 18+ for local development
+- Node.js 20+
 
 ### Deployment with Docker
 
 1. **Clone the repository.**
 2. **Configure your environment:**
-   Copy `.env.example` to `.env` and adjust the model parameters if needed.
+   Copy `.env.example` to `.env` and adjust the model parameters.
    ```bash
    cp .env.example .env
    ```
@@ -53,35 +53,23 @@ The system consists of a modern full-stack architecture optimized for high-densi
    ```bash
    docker-compose up -d
    ```
-4. **Access the UI:**
-   Navigate to `http://localhost:3000` to monitor the cluster.
-
-### Local Development
-
-1. Install dependencies:
-   ```bash
-   npm install
-   ```
-2. Start the development server (Frontend + Backend proxy):
-   ```bash
-   npm run dev
-   ```
+4. **Access the Dashboard:**
+   Navigate to `http://localhost:3000` to start the cluster orchestration.
 
 ## Configuration
 
-The orchestration is highly configurable via environment variables in the `.env` file:
+The orchestration is highly configurable via environment variables:
 
 | Variable | Description |
 |----------|-------------|
-| `LLAMA_CPP_IMAGE` | The container image for the `llama.cpp` server nodes. |
-| `HF_REPO_X` | Hugging Face repository for instance X (1-4). |
-| `HF_FILE_X` | Specific GGUF model file for instance X (1-4). |
-| `LLAMA_ARG_THREADS` | Number of CPU threads assigned to each `llama.cpp` process. |
-| `LLAMA_ARG_CTX_SIZE` | Context window size for each instance. |
+| `HF_REPO_X` | Hugging Face repository for Domain Expert X (1-4). |
+| `HF_FILE_X` | Specific GGUF model file for Domain Expert X (1-4). |
+| `LLAMA_ARG_THREADS` | Number of CPU threads (default 32) per instance. |
+| `cpuset` | Core pinning (e.g., 0-31, 32-63) defined in `docker-compose.yml`. |
 
 ## Why Ampere?
 
-Ampere CPUs provide a deterministic, high-core-count environment ideal for LLM density. By avoiding the overhead of multi-threading contention and leveraging large core counts, this orchestrator demonstrates how a single Ampere server can replace several GPU-based nodes for high-throughput, low-cost inference workloads.
+AmpereOne® M CPUs provide a deterministic, high-core-count environment ideal for LLM density. By avoiding the overhead of multi-threading contention and leveraging large core counts, this orchestrator demonstrates how a single Ampere server can replace expensive GPU-based infrastructure for high-throughput, low-latency inference workloads.
 
 ---
 *Built for High-Efficiency AI on Ampere Computing.*
