@@ -3,6 +3,7 @@ version: '3.8'
 services:
   web:
     build: .
+    image: ghcr.io/amperecomputingai/ampere-ai-density:0.1.1
     ports:
       - "3000:3000"
     environment:
